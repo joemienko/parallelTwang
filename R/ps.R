@@ -1,4 +1,3 @@
-## require(twang); data(lalonde); ps.lalonde <- ps(treat~age + educ + black + hispan + nodegree + married + re74 + re75, data = lalonde, stop.method = c("es.max", "es.mean"),estimand = "ATT", n.trees = 5000, verbose = FALSE)
 ps<-function(formula = formula(data),
              data,                         # data
              n.trees=10000,                 # gbm options
@@ -6,25 +5,21 @@ ps<-function(formula = formula(data),
              shrinkage=0.01,
              bag.fraction = 1.0,
              perm.test.iters=0,
+             par.details=gbm3::gbmParallel(num_threads=15),
              print.level=2,                 # direct optimizer options
              iterlim=1000,
              verbose=TRUE,
              estimand="ATE", 
              stop.method = c("ks.mean", "es.mean"), 
-             sampw = NULL, multinom = FALSE, 
+             sampw = NULL,
              ...){
-             	
 	
-#	multinom <- FALSE
-	
-	if(is.null(sampw)) sampW <- rep(1, nrow(data))
-	else sampW <- sampw
-	
-	type <- alert <- NULL
+	if(is.null(sampw))
+	sampw <- rep(1, nrow(data))
 	
 	dots <- list(...)
 	if(!is.null(dots$plots))
-	warning("From version 1.2, the plots argument has been removed from ps(). \nPlease use the plot() function instead.")
+	warning("From version 2.0, the plots argument has been removed from ps(). \nPlease use the plot() function instead.")
 	
 	stop.method[stop.method == "ks.stat.mean"] <- "ks.mean"
 	stop.method[stop.method == "es.stat.mean"] <- "es.mean"
@@ -77,9 +72,6 @@ stop.method <- methodList
    mf <- eval(mf, parent.frame())
    Terms <- attr(mf, "terms")
    var.names <- attributes(Terms)$term.labels
-   
-   if(length(var.names) < 2) stop("At least two variables are needed in the right-hand side of the formula.\n")
-   
    treat.var <- as.character(formula[[2]])
 
    # create the desc object. This holds information on variable balance
@@ -112,9 +104,9 @@ stop.method <- methodList
    # need to reformulate formula to use this environment
    form <- paste(deparse(formula, 500), collapse="") 
 
-   gbm1 <-gbm(formula(form),
+   gbm1 <- gbm3::gbm(formula(form),
               data = data,
-              weights=sampW,
+              weights=sampw,
               distribution = "bernoulli",
               n.trees = n.trees,
               interaction.depth = interaction.depth,
@@ -128,18 +120,15 @@ stop.method <- methodList
 
    if(verbose) cat("Diagnosis of unweighted analysis\n")
    
-   if(is.factor(data[,treat.var])) stop("Treatment indicator must be numeric, not a factor")
-   
    desc$unw <- desc.wts(data=data[,c(treat.var,var.names)],
                         treat.var=treat.var,
-                        w=sampW,
-                        sampw = rep(1, nrow(data)), 
+                        w=sampw,
                         tp="unw",
                         na.action="level",
                         perm.test.iters=perm.test.iters,
                         verbose=verbose,
                         alerts.stack=alerts.stack,
-                        estimand=estimand, multinom = multinom)
+                        estimand=estimand)
    desc$unw$n.trees <- NA
 
 balance <- matrix(NA, ncol = nMethod, nrow = 25)
@@ -152,23 +141,21 @@ balance <- matrix(NA, ncol = nMethod, nrow = 25)
 
       # get optimal number of iterations
       # Step #1: evaluate at 25 equally spaced points
-      iters <- round(seq(1,gbm1$n.trees,length=25))
+      iters <- round(seq(1,length(gbm1$trees),length=25))
+#      iters <- round(seq(1,gbm1$n.trees,length=100))
       bal <- rep(0,length(iters))
-      
-      
       for (j in 1:length(iters)){
          bal[j] <- MetricI(iters[j],
                     fun          = match.fun(stop.method[[i.tp]]$metric),
                     vars         = var.names,
                     treat.var    = treat.var,
                     data         = data,
-                    sampw        = sampW,
+                    sampw        = sampw,
                     rule.summary = match.fun(stop.method[[i.tp]]$rule.summary),
                     na.action    = stop.method[[i.tp]]$na.action,
                     gbm1         = gbm1,
-                    estimand       = estimand,
-                    multinom = multinom)
-
+                    estimand       = estimand)
+      }
 
 balance[,i.tp] <- bal
 
@@ -176,9 +163,6 @@ balance[,i.tp] <- bal
       interval <- which.min(bal) +c(-1,1)
       interval[1] <- max(1,interval[1])
       interval[2] <- min(length(iters),interval[2])
-      }
- 
-
    
       # Step #3: refine the minimum by searching with the identified interval
       opt<-optimize(MetricI,
@@ -189,14 +173,13 @@ balance[,i.tp] <- bal
                     vars      = var.names,
                     treat.var = treat.var,
                     data      = data,
-                    sampw     = sampW,
+                    sampw     = sampw,
                     rule.summary = match.fun(stop.method[[i.tp]]$rule.summary),
                     na.action = stop.method[[i.tp]]$na.action,
                     gbm1      = gbm1,
-                    estimand    = estimand,
-                    multinom = multinom)
+                    estimand    = estimand)
       if(verbose) cat("   Optimized at",round(opt$minimum),"\n")
-      if(gbm1$n.trees-opt$minimum < 100) warning("Optimal number of iterations is close to the specified n.trees. n.trees is likely set too small and better balance might be obtainable by setting n.trees to be larger.")
+      if(length(gbm1$trees)-opt$minimum < 100) warning("Optimal number of iterations is close to the specified n.trees. n.trees is likely set too small and better balance might be obtainable by setting n.trees to be larger.")
 
       # compute propensity score weights
       p.s[,i.tp]  <- predict(gbm1,newdata=data,
@@ -214,7 +197,7 @@ balance[,i.tp] <- bal
       }
       
       # adjust for sampling weights
-      w[,i.tp] <- w[,i.tp]*sampW 
+      w[,i.tp] <- w[,i.tp]*sampw 
 
       # Directly optimize the weights if requested
       if (stop.method[[i.tp]]$direct){
@@ -242,14 +225,12 @@ balance[,i.tp] <- bal
       desc[[tp]] <- desc.wts(data[,c(treat.var,var.names)],
                              treat.var    = treat.var,
                              w            = w[,i.tp],
-                             sampw = sampW, 
                              tp           = type,
                              na.action    = stop.method[[i.tp]]$na.action,
                              perm.test.iters=perm.test.iters,
                              verbose=verbose,
                              alerts.stack = alerts.stack,
-                             estimand       = estimand,
-                             multinom = multinom)
+                             estimand       = estimand)
       desc[[tp]]$n.trees <- 
          ifelse(stop.method[[i.tp]]$direct, NA, round(opt$minimum))
       
@@ -266,7 +247,6 @@ balance[,i.tp] <- bal
                   desc       = desc,
                   ps         = p.s,
                   w          = w,
-                  sampw      = sampW, 
                   estimand   = estimand,
 #                  plot.info  = plot.info,
                   datestamp  = date(),

@@ -9,6 +9,7 @@
 #include <Rmath.h>		/* constants */
 
 #include "kspval.h"
+#include <Rinternals.h>
 
 /* Two-sided two-sample */
 void

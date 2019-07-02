@@ -1,4 +1,4 @@
-plot.ps <- function(x,plots="optimize",subset=NULL, color = TRUE,...)
+plot.ps <- function(x,plots="optimize",subset=NULL,...)
 {
    # Creates diag.plot plots and sends to current device
    # x:     ps object 
@@ -6,7 +6,7 @@ plot.ps <- function(x,plots="optimize",subset=NULL, color = TRUE,...)
 
    # extract the propensity scores and weights from the ps object
 
-pt1 <- diag.plot.color(x, plots, subset = subset, color = color, ...)
+pt1 <- diag.plot(x, plots, subset = subset, ...)
 
 return(pt1)
 
