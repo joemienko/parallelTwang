@@ -5,7 +5,6 @@ ps<-function(formula = formula(data),
              shrinkage=0.01,
              bag.fraction = 1.0,
              perm.test.iters=0,
-             par.details=gbm3::gbmParallel(num_threads=15),
              print.level=2,                 # direct optimizer options
              iterlim=1000,
              verbose=TRUE,
