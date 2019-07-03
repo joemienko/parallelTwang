@@ -13,7 +13,6 @@ Description: This package offers functions for propensity score
         Ridgeway, McCaffrey, and Morral. Burgette, Griffin and
         McCaffrey updated the package in 2011.
 Suggests: gbm3
-Additional_repositories: https://github.com/gbm-developers/gbm3/
 License: GPL (>= 2)
 NeedsCompilation: yes
 Packaged: 2012-03-07 17:51:53 UTC; burgette
