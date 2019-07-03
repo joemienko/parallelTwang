@@ -6,3 +6,6 @@ S3method(summary, ps)
 S3method(print, summary.ps)
 S3method(print, dxwts)
 
+    importFrom("graphics", "boxplot")
+    importFrom("stats", "approx", "cor", "formula", "na.pass", "nlm",
+               "optimize", "predict", "quasibinomial", "var")

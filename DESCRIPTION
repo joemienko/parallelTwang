@@ -1,5 +1,5 @@
 Package: parallelTwang
-Version: 1.2-5
+Version: 1.0
 Date: 2012-2-21
 Title: Toolkit for Weighting and Analysis of Nonequivalent Groups
 Author: Greg Ridgeway <gregr@rand.org>, Dan McCaffrey
@@ -15,7 +15,4 @@ Description: This package offers functions for propensity score
 Suggests: gbm3
 License: GPL (>= 2)
 NeedsCompilation: yes
-Packaged: 2012-03-07 17:51:53 UTC; burgette
-Repository: CRAN
-Date/Publication: 2012-03-08 07:11:06
-RoxygenNote: 6.1.1 
+
