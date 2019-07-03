@@ -11,8 +11,16 @@ ps<-function(formula = formula(data),
              verbose=TRUE,
              estimand="ATE", 
              stop.method = c("ks.mean", "es.mean"), 
-             sampw = NULL,
-             ...){
+             sampw = NULL
+             ,par.details=gbm3::gbmParallel(num_threads=12
+                                            ,array_chunk_size = 2048)
+             ,nTrain = 200
+             ,mFeatures = 10
+             ,cv.folds=3
+             ,keep.data=TRUE
+             ,class.stratify.cv=TRUE
+             ,fold.id = "id_prsn_child"
+             ,...){
 	
 	if(is.null(sampw))
 	sampw <- rep(1, nrow(data))
@@ -104,19 +112,26 @@ stop.method <- methodList
    # need to reformulate formula to use this environment
    form <- paste(deparse(formula, 500), collapse="") 
 
-   gbm1 <- gbm3::gbm(formula(form),
-              data = data,
-              weights=sampw,
-              distribution = "bernoulli",
-              n.trees = n.trees,
-              interaction.depth = interaction.depth,
-              n.minobsinnode = 10,
-              shrinkage = shrinkage,
+   gbm1 <- gbm3::gbm(formula(form)
+              ,data = data
+              ,weights=sampw
+              ,distribution = "bernoulli"
+              ,n.trees = n.trees
+              ,interaction.depth = interaction.depth
+              ,n.minobsinnode = 10
+              ,shrinkage = shrinkage
    ### bag.fraction was 0.5.  revised 101210
-              bag.fraction = bag.fraction,
-              train.fraction = 1,
-              verbose = verbose,
-              keep.data = FALSE)
+              ,bag.fraction = bag.fraction
+              ,verbose = verbose
+             ,par.details=gbm3::gbmParallel(parallel::detectCores())
+             ,nTrain = nTrain
+             ,mFeatures = mFeatures
+             ,cv.folds=cv.folds
+             ,keep.data=keep.data
+             ,class.stratify.cv=class.stratify.cv
+             ,fold.id = fold.id
+             ,estimand = estimand)   
+
 
    if(verbose) cat("Diagnosis of unweighted analysis\n")
    
